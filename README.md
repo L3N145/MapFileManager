@@ -1,14 +1,7 @@
 📍 Map File Manager（マップ・ファイル・マネージャー）
 
-noteにて画像付きの操作説明を掲載しています。
+noteにて画像付きの操作説明などの詳細を掲載しています。
 https://editor.note.com/notes/n4a1e7ecfea46/edit/
-
-地図上の好きな場所にピンを立てて、その場所に関連するファイルやメモを紐づけて管理できる、ローカル動作のデスクトップアプリです。
-
-「あの旅行先の写真、どこに保存したっけ」「この土地の資料、どこに置いたっけ」を、**地図上の位置そのものをフォルダ代わりにして**管理できます。
-
-![screenshot](./docs/screenshot.png)
-<!-- スクリーンショットを docs/screenshot.png に配置してください -->
 
 ## ✨ 主な機能
 
@@ -29,7 +22,6 @@ https://editor.note.com/notes/n4a1e7ecfea46/edit/
 ## 🚀 セットアップ
 
 ```bash
-git clone https://github.com/yourname/mapfileman.git
 cd mapfileman
 npm install
 npm start
@@ -99,13 +91,7 @@ npm run dist         # 上記3つをまとめて作成（対応OS上でのみ）
 
 生成物は `dist/` フォルダに出力されます。
 
-**注意**：`package.json` の `build` 設定はアイコンファイル（`assets/icon.ico` / `assets/icon.icns` / `assets/icon.png`）を参照しています。実際にビルドする前に、これらのアイコンファイルを用意して `assets/` フォルダに配置するか、`build` 設定から該当の `icon` の行を削除してください（未設定の場合はElectronの既定アイコンが使われます）。
 
-配布した `.exe` / `.dmg` に**コード署名をしていない場合**、Windowsでは「WindowsによってPCが保護されました」というSmartScreenの警告、macOSでは「開発元が未確認のため開けません」という警告がユーザー側に表示されます。無償の個人配布ではよくあることですが、README等に「詳細情報 → 実行」で起動できる旨を書き添えておくと親切です。コード署名証明書（年間数万円程度）を取得すれば警告は出なくなりますが、個人・小規模配布では必須ではありません。
-
-
-
-MIT License（`LICENSE` ファイルを参照してください）
 
 ## ⚠️ 免責事項
 
