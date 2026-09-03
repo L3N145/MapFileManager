@@ -1,0 +1,34 @@
+{
+  "name": "mapfileman",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "electron": "^44.1.1",
+    "electron-builder": "^26.15.3"
+  },
+  "dependencies": {
+    "fs-extra": "^11.4.0",
+    "jszip": "^3.10.1",
+    "leaflet": "^1.9.4"
+  },
+  "build": {
+    "appId": "com.mapfileman.app",
+    "productName": "MapFileManager",
+    "win": {
+      "target": "nsis",
+      "icon": "./assets/icon.jpg"
+    },
+    "files": [
+      "**/*"
+    ]
+  }
+}
