@@ -147,7 +147,7 @@ ipcMain.handle('save-pins', async (event, pins) => {
   return true;
 });
 
-ipcMain.handle('create-pin', async (event, { lat, lng }) => {
+ipcMain.handle('create-pin', async (event, { lat, lng, lang }) => {
   const numLat = Number(lat);
   const numLng = Number(lng);
   if (!Number.isFinite(numLat) || !Number.isFinite(numLng)) return null;
@@ -157,10 +157,11 @@ ipcMain.handle('create-pin', async (event, { lat, lng }) => {
   // ピン同士でIDが衝突する可能性がゼロではないため、ランダムな8桁hexを付与する
   const id = 'pin_' + Date.now() + '_' + crypto.randomBytes(4).toString('hex');
   const now = new Date().toISOString();
+  const defaultNamePrefix = lang === 'en' ? 'Point_' : '地点_';
 
   pins[id] = {
     id,
-    name: `地点_${Object.keys(pins).length + 1}`,
+    name: `${defaultNamePrefix}${Object.keys(pins).length + 1}`,
     lat: numLat,
     lng: numLng,
     color: 'blue',
