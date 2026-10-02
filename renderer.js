@@ -1,3 +1,28 @@
+// Leaflet / JSZip が読み込めていない場合、以降の全処理が止まってしまい
+// 「ボタンが反応しない」原因が分かりにくいため、先に分かりやすいエラー表示を出す。
+// 主な原因は npm install を実行していないことによる node_modules の欠落。
+if (typeof L === 'undefined' || typeof JSZip === 'undefined') {
+  document.body.innerHTML = `
+    <div style="padding:40px; font-family:sans-serif; max-width:560px; margin:60px auto;
+                background:#fff3f3; border:1px solid #e74c3c; border-radius:8px; line-height:1.6;">
+      <h2 style="margin-top:0; color:#c0392b;">⚠️ アプリの起動に失敗しました</h2>
+      <p>地図ライブラリ（Leaflet）またはZIPライブラリ（JSZip）を読み込めませんでした。</p>
+      <p><b>考えられる原因：</b><code>npm install</code> を実行しないまま起動している可能性があります。</p>
+      <p>プロジェクトフォルダで以下を実行してから、もう一度 <code>npm start</code> をお試しください。</p>
+      <pre style="background:#fff; padding:10px; border-radius:4px; border:1px solid #ddd;">npm install</pre>
+      <p style="font-size:12px; color:#888;">改善しない場合は、開発者ツール（Ctrl+Shift+I）のConsoleタブに出ているエラー内容をご確認ください。</p>
+    </div>`;
+  throw new Error('Leaflet または JSZip が読み込まれていません（npm install 未実行の可能性）。');
+}
+
+// i18n.js が読み込まれていない（または読み込み順がズレている）場合でも、
+// renderer.js 全体が停止しないようフォールバックを用意する。
+if (typeof t !== 'function' || typeof applyStaticI18n !== 'function') {
+  console.error('i18n.js が正しく読み込まれていません。index.html で i18n.js が renderer.js より前に読み込まれているか確認してください。');
+  window.t = window.t || function (key) { return key; };
+  window.applyStaticI18n = window.applyStaticI18n || function () {};
+}
+
 const map = L.map('map', {
   maxBounds: [[-90, -180], [90, 180]],
   maxBoundsViscosity: 1.0,
@@ -61,9 +86,9 @@ function sortPins(pinList, sortOption) {
   return pinList.sort((a, b) => {
     switch (sortOption) {
       case 'name_asc':
-        return a.name.localeCompare(b.name, 'ja');
+        return a.name.localeCompare(b.name, currentLang);
       case 'name_desc':
-        return b.name.localeCompare(a.name, 'ja');
+        return b.name.localeCompare(a.name, currentLang);
       case 'created_asc':
         return new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
       case 'created_desc':
@@ -87,7 +112,7 @@ async function refreshPinList() {
   
   let pinArray = Object.values(pinsCache);
   if (pinArray.length === 0) {
-    listContent.innerHTML = '<p style="padding:15px; color:#999; font-size:13px;">登録されたピンがありません。</p>';
+    listContent.innerHTML = `<p style="padding:15px; color:#999; font-size:13px;">${t('noPinsRegistered')}</p>`;
     return;
   }
 
@@ -110,9 +135,9 @@ async function refreshPinList() {
       <div class="pin-list-icon">📍</div>
       <div class="pin-list-text">
         <span class="pin-list-name">${pin.name}</span>
-        <span class="pin-list-coords">${pin.lat.toFixed(4)}, ${pin.lng.toFixed(4)} （📁 ${fileCount} 項目）</span>
+        <span class="pin-list-coords">${pin.lat.toFixed(4)}, ${pin.lng.toFixed(4)} （${t('itemsCount', { count: fileCount })}）</span>
       </div>
-      <button class="btn btn-sm btn-danger pin-list-del" title="ピンを削除">🗑️</button>
+      <button class="btn btn-sm btn-danger pin-list-del" title="${t('deletePinTitleAttr')}">🗑️</button>
     `;
 
     div.onclick = (e) => {
@@ -123,7 +148,7 @@ async function refreshPinList() {
 
     div.querySelector('.pin-list-del').onclick = async (e) => {
       e.stopPropagation();
-      if (confirm(`「${pin.name}」とデータを削除しますか？`)) {
+      if (confirm(t('confirmDeletePinWithData', { name: pin.name }))) {
         await window.api.deletePin(pin.id);
         removeMarker(pin.id);
         delete pinsCache[pin.id];
@@ -139,12 +164,12 @@ async function refreshPinList() {
 // ファイル一覧更新
 async function refreshList() {
   const files = await window.api.readFolder(currentPinId, currentSubPath);
-  subpathDisplay.textContent = currentSubPath === '' ? 'ルート階層' : '/' + currentSubPath;
+  subpathDisplay.textContent = currentSubPath === '' ? t('rootLevel') : '/' + currentSubPath;
   document.getElementById('btn-up').style.display = currentSubPath === '' ? 'none' : 'block';
   
   fileList.innerHTML = '';
   if (files.length === 0) {
-    fileList.innerHTML = '<p style="color:#999; font-size:13px; text-align:center; margin-top:20px;">空です。<br>ここにファイルをドラッグ＆ドロップできます。</p>';
+    fileList.innerHTML = `<p style="color:#999; font-size:13px; text-align:center; margin-top:20px;">${t('emptyFolderMessage')}</p>`;
     return;
   }
   
@@ -169,21 +194,21 @@ async function refreshList() {
 
     const renameBtn = document.createElement('button');
     renameBtn.className = 'btn-sm btn-rename';
-    renameBtn.textContent = '名前変更';
+    renameBtn.textContent = t('renameBtnLabel');
     renameBtn.onclick = async () => {
-      const newName = await showPrompt('新しい名前を入力してください', item.name);
+      const newName = await showPrompt(t('promptRenameItem'), item.name);
       if (newName && newName !== item.name) {
         const ok = await window.api.renameItem(currentPinId, currentSubPath, item.name, newName);
-        if (!ok) { alert('その名前は使用できません（/ や \\、.. などは使えません）。'); return; }
+        if (!ok) { alert(t('invalidNameError')); return; }
         refreshList();
       }
     };
 
     const deleteBtn = document.createElement('button');
     deleteBtn.className = 'btn-sm btn-delete';
-    deleteBtn.textContent = '削除';
+    deleteBtn.textContent = t('deleteBtnLabel');
     deleteBtn.onclick = async () => {
-      if (confirm(`「${item.name}」をごみ箱へ移動しますか？`)) {
+      if (confirm(t('confirmDeleteItemToTrash', { name: item.name }))) {
         await window.api.deleteItem(currentPinId, currentSubPath, item.name);
         refreshList();
         refreshPinList();
@@ -274,7 +299,7 @@ function startMovingMode() {
   
   movingBanner.classList.add('active');
   const btn = document.getElementById('move-pin-btn');
-  btn.textContent = '✅ 位置変更を決定';
+  btn.textContent = t('moveConfirmBtn');
   btn.style.background = '#28a745';
 }
 
@@ -286,7 +311,7 @@ function stopMovingMode() {
   movingBanner.classList.remove('active');
   const btn = document.getElementById('move-pin-btn');
   if (btn) {
-    btn.textContent = '📍 位置を変更する';
+    btn.textContent = t('movePinBtn');
     btn.style.background = '#17a2b8';
   }
 }
@@ -297,6 +322,14 @@ async function loadExistingPins() {
   refreshPinList(); 
 }
 loadExistingPins();
+
+// 言語が切り替わったときに、動的に生成済みの表示も更新する
+function onLanguageChanged() {
+  refreshPinList();
+  if (currentPinId) {
+    refreshList();
+  }
+}
 
 // --- イベントハンドラ ---
 
@@ -335,7 +368,7 @@ document.getElementById('rename-pin-btn').addEventListener('click', async () => 
   const currentPin = pinsCache[currentPinId];
   if (!currentPin) return;
 
-  const newName = await showPrompt('この場所の新しい名前を入力してください', currentPin.name);
+  const newName = await showPrompt(t('promptRenamePin'), currentPin.name);
   if (newName !== null && newName.trim() !== '') {
     await window.api.renamePin({ id: currentPinId, newName: newName.trim() });
     pinsCache[currentPinId].name = newName.trim();
@@ -363,18 +396,18 @@ document.getElementById('add-file-btn').addEventListener('click', async () => {
   if (success) { refreshList(); refreshPinList(); }
 });
 document.getElementById('new-file-btn').addEventListener('click', async () => {
-  const name = await showPrompt('作成するファイル名（例: メモ.txt）');
+  const name = await showPrompt(t('promptNewFileName'));
   if (name) {
     const ok = await window.api.createNewFile(currentPinId, currentSubPath, name);
-    if (!ok) { alert('その名前は使用できません（/ や \\、.. などは使えません）。'); return; }
+    if (!ok) { alert(t('invalidNameError')); return; }
     refreshList(); refreshPinList();
   }
 });
 document.getElementById('new-dir-btn').addEventListener('click', async () => {
-  const name = await showPrompt('作成するフォルダ名');
+  const name = await showPrompt(t('promptNewFolderName'));
   if (name) {
     const ok = await window.api.createSubFolder(currentPinId, currentSubPath, name);
-    if (!ok) { alert('その名前は使用できません（/ や \\、.. などは使えません）。'); return; }
+    if (!ok) { alert(t('invalidNameError')); return; }
     refreshList(); refreshPinList();
   }
 });
@@ -383,7 +416,7 @@ document.getElementById('open-explorer-btn').addEventListener('click', () => {
 });
 
 document.getElementById('delete-pin-btn').addEventListener('click', async () => {
-  if (confirm('このピンと、中身のデータをすべてごみ箱へ移動しますか？')) {
+  if (confirm(t('confirmDeletePinAndData'))) {
     await window.api.deletePin(currentPinId);
     removeMarker(currentPinId);
     delete pinsCache[currentPinId];
@@ -413,7 +446,7 @@ fileList.addEventListener('drop', async (e) => {
   fileList.classList.remove('drag-over');
 
   if (!currentPinId) {
-    alert('ピンが選択されていません');
+    alert(t('noPinSelected'));
     return;
   }
 
@@ -469,7 +502,7 @@ map.on('click', async (e) => {
     return;
   }
 
-  const { id, pinData } = await window.api.createPin({ lat: e.latlng.lat, lng: e.latlng.lng });
+  const { id, pinData } = await window.api.createPin({ lat: e.latlng.lat, lng: e.latlng.lng, lang: currentLang });
   pinsCache[id] = pinData;
   placeMarker(id, pinData);
   refreshPinList(); 
@@ -486,11 +519,11 @@ async function searchLocation() {
   }
 
   if (result && result.error === 'rate_limited') {
-    alert('検索の間隔が短すぎます。少し待ってから再度お試しください。');
+    alert(t('searchIntervalTooShort'));
   } else if (result && result.error === 'not_found') {
-    alert('場所が見つかりませんでした。');
+    alert(t('locationNotFound'));
   } else {
-    alert('検索に失敗しました。');
+    alert(t('searchFailed'));
   }
 }
 
@@ -510,7 +543,7 @@ function renderExportPinList(filterQuery = '') {
   const pinArray = Object.values(pinsCache).filter(p => !q || p.name.toLowerCase().includes(q));
 
   if (pinArray.length === 0) {
-    container.innerHTML = '<p style="padding:10px; color:#999; font-size:13px;">該当するピンがありません。</p>';
+    container.innerHTML = `<p style="padding:10px; color:#999; font-size:13px;">${t('noMatchingPins')}</p>`;
     return;
   }
 
@@ -529,7 +562,7 @@ function renderExportPinList(filterQuery = '') {
 
 document.getElementById('export-btn').addEventListener('click', () => {
   if (Object.keys(pinsCache).length === 0) {
-    alert('エクスポートできるピンがありません。');
+    alert(t('noPinsToExport'));
     return;
   }
   document.getElementById('export-search-input').value = '';
@@ -557,7 +590,7 @@ document.getElementById('export-confirm-btn').addEventListener('click', async ()
   const targetIds = Array.from(selectedCheckboxes).map(cb => cb.value);
 
   if (targetIds.length === 0) {
-    alert('エクスポートするピンを選択してください。');
+    alert(t('selectPinsToExport'));
     return;
   }
 
@@ -584,7 +617,7 @@ document.getElementById('export-confirm-btn').addEventListener('click', async ()
   await window.api.writeZipFile(exportPath, content);
 
   document.getElementById('export-modal').style.display = 'none';
-  alert(`選択した ${targetIds.length} 件のピンデータをエクスポートしました！`);
+  alert(t('exportSuccess', { count: targetIds.length }));
 });
 
 // ZIPを取り込み (Import)
@@ -601,10 +634,10 @@ function generateUniqueRelPath(relPath, existingSet) {
   const ext = dotIdx > 0 ? fileName.slice(dotIdx) : '';
 
   let counter = 1;
-  let candidate = `${dir}${base} (取込${counter})${ext}`;
+  let candidate = `${dir}${base} ${t('renameSuffixTemplate', { n: counter })}${ext}`;
   while (existingSet.has(candidate)) {
     counter++;
-    candidate = `${dir}${base} (取込${counter})${ext}`;
+    candidate = `${dir}${base} ${t('renameSuffixTemplate', { n: counter })}${ext}`;
   }
   existingSet.add(candidate);
   return candidate;
@@ -618,7 +651,7 @@ document.getElementById('import-btn').addEventListener('click', async () => {
     const zip = await JSZip.loadAsync(zipBuffer);
     const pinsJsonFile = zip.file('pins.json');
     if (!pinsJsonFile) {
-      alert('無効なエクスポートデータです (pins.jsonが見つかりません)');
+      alert(t('invalidExportData'));
       return;
     }
 
@@ -627,7 +660,7 @@ document.getElementById('import-btn').addEventListener('click', async () => {
     const pinIds = Object.keys(importedPinsMap);
 
     if (pinIds.length === 0) {
-      alert('取り込み可能なピンデータがありません。');
+      alert(t('noImportablePins'));
       return;
     }
 
@@ -670,7 +703,7 @@ document.getElementById('import-btn').addEventListener('click', async () => {
 
   } catch (err) {
     console.error(err);
-    alert('ZIPファイルの読み込みに失敗しました。');
+    alert(t('zipReadFailed'));
   }
 });
 
@@ -694,7 +727,7 @@ document.getElementById('import-confirm-btn').addEventListener('click', async ()
   const targetIds = Array.from(selectedCheckboxes).map(cb => cb.value);
 
   if (targetIds.length === 0) {
-    alert('取り込むピンを選択してください。');
+    alert(t('selectPinsToImport'));
     return;
   }
 
@@ -753,9 +786,9 @@ function renderConflictModal(conflicts) {
         📍 <b>${c.pinName}</b> ／ ${c.relPath}
       </div>
       <select class="conflict-resolution" data-idx="${idx}" style="width:100%; padding:4px; font-size:12px;">
-        <option value="overwrite">上書きする</option>
-        <option value="skip">スキップする（取り込まない）</option>
-        <option value="rename">別名で保存する（両方残す）</option>
+        <option value="overwrite">${t('conflictOptionOverwrite')}</option>
+        <option value="skip">${t('conflictOptionSkip')}</option>
+        <option value="rename">${t('conflictOptionRename')}</option>
       </select>
     `;
     container.appendChild(div);
@@ -813,9 +846,9 @@ async function finalizeImport(importPins, importPinFilesMap) {
   pendingImportData = null;
 
   if (result && result.skipped > 0) {
-    alert(`取り込みが完了しました（成功: ${result.imported}件 / 不正なデータのためスキップ: ${result.skipped}件）`);
+    alert(t('importSuccessWithSkipped', { imported: result.imported, skipped: result.skipped }));
   } else {
-    alert('ピンとファイルの取り込みが完了しました！');
+    alert(t('importSuccess'));
   }
 
   // 地図とピン一覧を更新
