@@ -1,15 +1,18 @@
 {
   "name": "mapfileman",
   "version": "1.0.0",
-  "description": "",
+  "description": "地図上にピンを立ててファイルを管理するローカル動作のデスクトップアプリ",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dist:win": "electron-builder --win"
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux",
+    "dist": "electron-builder -mwl"
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "MIT",
   "type": "commonjs",
   "devDependencies": {
     "electron": "^44.1.1",
@@ -21,14 +24,36 @@
     "leaflet": "^1.9.4"
   },
   "build": {
-    "appId": "com.mapfileman.app",
+    "appId": "com.example.mapfileman",
     "productName": "MapFileManager",
+    "files": [
+      "**/*",
+      "!node_modules/electron-builder/**",
+      "!node_modules/.bin/**",
+      "!dist/**",
+      "!.git/**",
+      "!*.md"
+    ],
+    "directories": {
+      "output": "dist"
+    },
     "win": {
       "target": "nsis",
-      "icon": "./assets/icon.jpg"
+      "icon": "assets/icon.png"
     },
-    "files": [
-      "**/*"
-    ]
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.png",
+      "category": "public.app-category.utilities"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.png",
+      "category": "Utility"
+    }
   }
 }
