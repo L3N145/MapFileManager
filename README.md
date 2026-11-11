@@ -1,7 +1,7 @@
 📍 Map File Manager（マップ・ファイル・マネージャー）
 
 noteにて画像付きの操作説明などの詳細を掲載しています。
-https://editor.note.com/notes/n4a1e7ecfea46/edit/
+https://note.com/lively_mint2805/n/n4a1e7ecfea46
 
 10/02
 Englishボタンを作成しました。どのくらい英語に変換できているかはわかりません。
@@ -37,7 +37,7 @@ npm start
 ## 📖 使い方
 
 noteにて説明しています。
-https://editor.note.com/notes/n4a1e7ecfea46/edit/
+https://note.com/lively_mint2805/n/n4a1e7ecfea46
 
 1. 地図上の好きな場所をクリックすると、その場所にピンが作成されます
 2. 作成したピンをクリックすると、右側にファイル管理パネルが開きます
